@@ -1,6 +1,10 @@
 # COVID-19 Dashboard
 
+![COVID-19 Dashboard](docs/screenshot.jpg)
+
 A simple web dashboard for exploring COVID-19 cases, deaths, and active infections around the world.
+
+Live: [https://bsozer06.github.io/covid-dashboard/](https://bsozer06.github.io/covid-dashboard/)
 
 Use the map, charts, and filters together to compare countries and continents. Click a country on the map to focus the charts on that place.
 
