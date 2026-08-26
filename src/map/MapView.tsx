@@ -46,9 +46,6 @@ export function MapView({
   const metricRef = useRef(metric);
   countriesRef.current = countries;
   metricRef.current = metric;
-  const classifiedRef = useRef<
-    FeatureCollection<Polygon | MultiPolygon, ClassifiedProperties> | null
-  >(null);
   const [tierCounts, setTierCounts] = useState(
     countTiers({ type: 'FeatureCollection', features: [] }),
   );
@@ -89,7 +86,6 @@ export function MapView({
       );
 
       onSelect(selectedCountry);
-
       syncPopup(
         map,
         popupRef,
@@ -97,6 +93,15 @@ export function MapView({
         [event.lngLat.lng, event.lngLat.lat],
         () => onSelect(null),
       );
+    };
+
+    const onBackgroundClick = (event: maplibregl.MapMouseEvent) => {
+      const hits = map.queryRenderedFeatures(event.point, {
+        layers: [COUNTRIES_FILL],
+      });
+      if (hits.length > 0) return;
+      onSelect(null);
+      syncPopup(map, popupRef, null, null, () => onSelect(null));
     };
 
     const onMouseEnter = () => {
@@ -107,12 +112,14 @@ export function MapView({
     };
 
     map.on('click', COUNTRIES_FILL, onClick);
+    map.on('click', onBackgroundClick);
     map.on('mouseenter', COUNTRIES_FILL, onMouseEnter);
     map.on('mouseleave', COUNTRIES_FILL, onMouseLeave);
 
     return () => {
       cancelled = true;
       map.off('click', COUNTRIES_FILL, onClick);
+      map.off('click', onBackgroundClick);
       map.off('mouseenter', COUNTRIES_FILL, onMouseEnter);
       map.off('mouseleave', COUNTRIES_FILL, onMouseLeave);
       popupRef.current?.remove();
@@ -126,7 +133,6 @@ export function MapView({
     if (!map || !mapReady || !geojson || countries.length === 0) return;
 
     const classified = mergeAndClassify(geojson, countries, metric);
-    classifiedRef.current = classified;
     updateCountryData(map, classified);
     setTierCounts(countTiers(classified));
   }, [countries, metric, mapReady, geojsonReady]);
@@ -143,52 +149,10 @@ export function MapView({
     updateCountryVisibility(map, visibleIso2);
   }, [visibleIso2, mapReady, countries, metric]);
 
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
-
-    if (!selected) {
-      syncPopup(map, popupRef, null, null, () => onSelect(null));
-      return;
-    }
-
-    const feature = classifiedRef.current?.features.find(
-      (f) => f.properties.iso2 === selected.iso2,
-    );
-    if (!feature) return;
-
-    syncPopup(
-      map,
-      popupRef,
-      feature.properties,
-      getFeatureCenter(feature.geometry),
-      () => onSelect(null),
-    );
-  }, [selected, mapReady, onSelect]);
-
   return (
     <div className="map-wrap">
       <div ref={mapContainerRef} className="map-container" />
       <MapLegend counts={tierCounts} />
     </div>
   );
-}
-
-function getFeatureCenter(
-  geometry: Polygon | MultiPolygon,
-): [number, number] {
-  const ring =
-    geometry.type === 'Polygon'
-      ? geometry.coordinates[0]
-      : geometry.coordinates[0]?.[0];
-
-  if (!ring?.length) return [0, 0];
-
-  let lng = 0;
-  let lat = 0;
-  for (const [x, y] of ring) {
-    lng += x;
-    lat += y;
-  }
-  return [lng / ring.length, lat / ring.length];
 }

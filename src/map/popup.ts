@@ -50,12 +50,18 @@ export function syncPopup(
   }
 
   if (!popupRef.current) {
-    popupRef.current = new maplibregl.Popup({ offset: 12, maxWidth: '260px' });
+    popupRef.current = new maplibregl.Popup({
+      offset: 12,
+      maxWidth: '260px',
+      closeOnClick: false,
+      focusAfterOpen: false,
+    });
     popupRef.current.on('close', onClose);
   }
 
-  popupRef.current
-    .setLngLat(lngLat)
-    .setHTML(buildPopupHtml(props))
-    .addTo(map);
+  const popup = popupRef.current;
+  popup.setLngLat(lngLat).setHTML(buildPopupHtml(props));
+  if (!popup.isOpen()) {
+    popup.addTo(map);
+  }
 }
